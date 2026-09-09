@@ -282,15 +282,30 @@
                     />
                   </div>
                   <div class="col-12 col-sm-6">
-                    <q-input
+                    <q-select
                       v-model="formulario.modelo"
                       outlined
                       dense
                       label="Modelo del equipo *"
-                      hint="Ej: Galaxy A15, iPhone 13..."
+                      hint="Seleccione o escriba la referencia"
+                      :options="opcionesModeloFiltradas"
+                      :disable="!formulario.marca"
+                      use-input
+                      fill-input
+                      hide-selected
+                      input-debounce="0"
+                      @filter="filtrarModelos"
                       lazy-rules
                       :rules="[val => (val && val.trim().length > 0) || 'El modelo es obligatorio']"
-                    />
+                    >
+                      <template v-slot:no-option>
+                        <q-item>
+                          <q-item-section class="text-grey">
+                            Sin coincidencias. Puede escribir el modelo libremente.
+                          </q-item-section>
+                        </q-item>
+                      </template>
+                    </q-select>
                   </div>
                 </div>
 
@@ -552,6 +567,96 @@ const opcionesMarca = [
   'Otra'
 ]
 
+const modelosPorMarca = {
+  Samsung: [
+    'Galaxy S24 Ultra', 'Galaxy S24+', 'Galaxy S24',
+    'Galaxy S23 Ultra', 'Galaxy S23', 'Galaxy S22 Ultra',
+    'Galaxy A55', 'Galaxy A54', 'Galaxy A35', 'Galaxy A25',
+    'Galaxy A15', 'Galaxy A14', 'Galaxy A05s', 'Galaxy A05',
+    'Galaxy Z Fold5', 'Galaxy Z Flip5', 'Galaxy Note 20'
+  ],
+  Apple: [
+    'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15 Plus', 'iPhone 15',
+    'iPhone 14 Pro Max', 'iPhone 14 Pro', 'iPhone 14',
+    'iPhone 13 Pro Max', 'iPhone 13', 'iPhone 13 mini',
+    'iPhone 12', 'iPhone 11', 'iPhone XR', 'iPhone X', 'iPhone 8'
+  ],
+  Xiaomi: [
+    'Redmi Note 13 Pro+', 'Redmi Note 13 Pro', 'Redmi Note 13',
+    'Redmi Note 12 Pro', 'Redmi Note 12', 'Redmi 13C', 'Redmi 12',
+    'Poco X6 Pro', 'Poco X5 Pro', 'Poco M6 Pro', 'Poco C65',
+    'Xiaomi 14', 'Xiaomi 13T'
+  ],
+  Motorola: [
+    'Moto Edge 40 Neo', 'Moto Edge 40', 'Moto Edge 30',
+    'Moto G84', 'Moto G54', 'Moto G24', 'Moto G14', 'Moto G8',
+    'Moto E22', 'Moto E13'
+  ],
+  Huawei: [
+    'P60 Pro', 'P50 Pro', 'P40 Lite', 'P30 Lite', 'P30 Pro',
+    'Mate 50 Pro', 'Mate 40 Pro', 'Nova 11', 'Nova 9', 'Y9 Prime'
+  ],
+  Oppo: [
+    'Reno 10 Pro', 'Reno 8', 'Reno 7', 'A98', 'A78', 'A58', 'A38', 'A18'
+  ],
+  Vivo: [
+    'V29', 'V27', 'Y36', 'Y27', 'Y17s', 'Y02s'
+  ],
+  Realme: [
+    'Realme 11 Pro+', 'Realme 11', 'Realme C55', 'Realme C53', 'Realme C35', 'Realme GT'
+  ],
+  Infinix: [
+    'Note 30 Pro', 'Note 30', 'Hot 40 Pro', 'Hot 30', 'Hot 20', 'Smart 8'
+  ],
+  Honor: [
+    'Honor 90', 'Honor 70', 'Honor Magic6 Lite', 'Honor X8b', 'Honor X7b', 'Honor X6a'
+  ],
+  ZTE: [
+    'Blade V50', 'Blade V40', 'Blade A72', 'Blade A53'
+  ],
+  Nokia: [
+    'G42', 'G22', 'C32', 'C12', 'G21'
+  ],
+  Alcatel: [
+    '1S', '1B', '1V', '3X'
+  ],
+  Lenovo: [
+    'Tab M10', 'Tab P11', 'Legion Y70'
+  ],
+  'iPad / Tablet': [
+    'iPad Air', 'iPad Pro', 'iPad 10a Gen', 'iPad 9a Gen', 'iPad mini',
+    'Galaxy Tab A9', 'Galaxy Tab S9'
+  ],
+  Otra: [
+    'Otro Modelo'
+  ]
+}
+
+const opcionesModeloFiltradas = ref([])
+
+const modelosDisponibles = computed(() => {
+  const marca = formulario.value.marca
+  if (!marca || !modelosPorMarca[marca]) return []
+  return modelosPorMarca[marca]
+})
+
+function filtrarModelos(val, update) {
+  update(() => {
+    const lista = modelosDisponibles.value
+    if (val === '') {
+      opcionesModeloFiltradas.value = lista
+    } else {
+      const needle = val.toLowerCase()
+      const filtradas = lista.filter(v => v.toLowerCase().includes(needle))
+      if (filtradas.length === 0 && val.trim() !== '') {
+        opcionesModeloFiltradas.value = [val.trim()]
+      } else {
+        opcionesModeloFiltradas.value = filtradas
+      }
+    }
+  })
+}
+
 const opcionesTipoReparacion = [
   'Cambio de pantalla',
   'Cambio de batería',
@@ -641,6 +746,16 @@ const opcionesEstadoEquipoFiltradas = computed(() => {
     disable: op.value === 'entregado' && pagoIncompleto
   }))
 })
+
+// Si cambia la marca, limpia el modelo salvo si estamos abriendo para edición
+watch(
+  () => formulario.value.marca,
+  (nuevaMarca, viejaMarca) => {
+    if (nuevaMarca !== viejaMarca && !modoEdicion.value) {
+      formulario.value.modelo = ''
+    }
+  }
+)
 
 // Si cambia tipo de reparación distinto de 'Otros', limpia la especificación
 watch(
@@ -1010,4 +1125,3 @@ function claseTarjeta(servicio) {
   border-left-color: #21ba45;
 }
 </style>
-
