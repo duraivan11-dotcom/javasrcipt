@@ -248,22 +248,24 @@
         <!-- Modal Formulario (Crear / Editar) -->
         <q-dialog v-model="mostrarFormulario" persistent>
           <q-card style="width: 520px; max-width: 95vw;">
-            <q-card-section class="bg-primary text-white">
-              <div class="text-h6">
-                <span v-if="modoEdicion">Editar servicio</span>
-                <span v-else>Nuevo servicio</span>
-              </div>
-            </q-card-section>
+            <q-form ref="formularioRef" @submit.prevent="guardarServicio">
+              <q-card-section class="bg-primary text-white">
+                <div class="text-h6">
+                  <span v-if="modoEdicion">Editar servicio</span>
+                  <span v-else>Nuevo servicio</span>
+                </div>
+              </q-card-section>
 
-            <q-card-section style="max-height: 70vh" class="scroll">
-              <q-form ref="formularioRef" class="q-gutter-md">
+              <q-card-section style="max-height: 70vh" class="scroll q-gutter-md">
                 
                 <!-- Cliente -->
                 <q-input
                   v-model="formulario.cliente"
                   outlined
                   dense
-                  label="Nombre del cliente"
+                  label="Nombre del cliente *"
+                  lazy-rules
+                  :rules="[val => (val && val.trim().length > 0) || 'El nombre del cliente es obligatorio']"
                 />
 
                 <!-- Marca (Select) y Modelo (Input) -->
@@ -273,8 +275,10 @@
                       v-model="formulario.marca"
                       outlined
                       dense
-                      label="Marca del equipo"
+                      label="Marca del equipo *"
                       :options="opcionesMarca"
+                      lazy-rules
+                      :rules="[val => (val && val.trim().length > 0) || 'Seleccione la marca']"
                     />
                   </div>
                   <div class="col-12 col-sm-6">
@@ -282,8 +286,10 @@
                       v-model="formulario.modelo"
                       outlined
                       dense
-                      label="Modelo del equipo"
+                      label="Modelo del equipo *"
                       hint="Ej: Galaxy A15, iPhone 13..."
+                      lazy-rules
+                      :rules="[val => (val && val.trim().length > 0) || 'El modelo es obligatorio']"
                     />
                   </div>
                 </div>
@@ -293,8 +299,10 @@
                   v-model="formulario.tipoReparacion"
                   outlined
                   dense
-                  label="Tipo de reparación"
+                  label="Tipo de reparación *"
                   :options="opcionesTipoReparacion"
+                  lazy-rules
+                  :rules="[val => (val && val.trim().length > 0) || 'Seleccione el tipo de reparación']"
                 />
 
                 <q-input
@@ -302,7 +310,9 @@
                   v-model="formulario.otroTipoReparacion"
                   outlined
                   dense
-                  label="Especifica la reparación"
+                  label="Especifica la reparación *"
+                  lazy-rules
+                  :rules="[val => (val && val.trim().length > 0) || 'Especifique el tipo de reparación']"
                 />
 
                 <!-- Técnico -->
@@ -310,8 +320,10 @@
                   v-model="formulario.tecnico"
                   outlined
                   dense
-                  label="Técnico asignado"
+                  label="Técnico asignado *"
                   :options="opcionesTecnicos"
+                  lazy-rules
+                  :rules="[val => (val && val.trim().length > 0) || 'Seleccione el técnico asignado']"
                 />
 
                 <!-- Fecha y Hora automáticas no editables -->
@@ -345,7 +357,12 @@
                   dense
                   type="number"
                   prefix="$"
-                  label="Precio del servicio"
+                  label="Precio del servicio *"
+                  lazy-rules
+                  :rules="[
+                    val => (val !== null && val !== '' && !isNaN(val)) || 'El precio es obligatorio',
+                    val => Number(val) >= 0 || 'El precio no puede ser negativo'
+                  ]"
                 />
 
                 <!-- Método de Pago y Estado del Pago -->
@@ -355,8 +372,10 @@
                       v-model="formulario.metodoPago"
                       outlined
                       dense
-                      label="Método de pago"
+                      label="Método de pago *"
                       :options="opcionesMetodoPago"
+                      lazy-rules
+                      :rules="[val => (val && val.trim().length > 0) || 'Seleccione un método de pago']"
                     />
                   </div>
                   <div class="col-6">
@@ -366,7 +385,7 @@
                       dense
                       emit-value
                       map-options
-                      label="Estado del pago"
+                      label="Estado del pago *"
                       :options="opcionesEstadoPago"
                     />
                   </div>
@@ -380,8 +399,14 @@
                     dense
                     type="number"
                     prefix="$"
-                    label="Valor / Monto abonado"
+                    label="Valor / Monto abonado *"
                     hint="Ingrese la cantidad entregada como abono"
+                    lazy-rules
+                    :rules="[
+                      val => (val !== null && val !== '' && !isNaN(val)) || 'El monto abonado es obligatorio',
+                      val => Number(val) > 0 || 'El abono debe ser mayor a 0',
+                      val => (formulario.precio === null || Number(val) < Number(formulario.precio)) || 'El abono debe ser menor al precio total'
+                    ]"
                   />
                   <div v-if="formulario.precio && formulario.montoAbono !== null" class="row justify-between text-caption text-weight-bold q-mt-xs">
                     <span>Abonado: ${{ formatearPrecio(formulario.montoAbono) }}</span>
@@ -420,13 +445,13 @@
                   autogrow
                   label="Observaciones (opcional)"
                 />
-              </q-form>
-            </q-card-section>
+              </q-card-section>
 
-            <q-card-actions align="right" class="q-pa-md">
-              <q-btn flat label="Cancelar" color="grey-8" v-close-popup @click="cerrarFormulario" />
-              <q-btn unelevated label="Guardar" color="primary" @click="guardarServicio" />
-            </q-card-actions>
+              <q-card-actions align="right" class="q-pa-md">
+                <q-btn flat label="Cancelar" color="grey-8" v-close-popup @click="cerrarFormulario" />
+                <q-btn unelevated label="Guardar" color="primary" type="submit" />
+              </q-card-actions>
+            </q-form>
           </q-card>
         </q-dialog>
 
@@ -498,7 +523,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 import { useQuasar } from 'quasar'
 
@@ -576,7 +601,7 @@ const calificacionEntrega = ref(5)
 function formularioVacio() {
   return {
     cliente: '',
-    marca: 'Samsung',
+    marca: '',
     modelo: '',
     equipo: '',
     tipoReparacion: '',
@@ -658,6 +683,9 @@ function abrirNuevo() {
   idEnEdicion.value = null
   formulario.value = formularioVacio()
   mostrarFormulario.value = true
+  nextTick(() => {
+    formularioRef.value?.resetValidation()
+  })
 }
 
 function abrirEdicion(servicio) {
@@ -689,6 +717,9 @@ function abrirEdicion(servicio) {
     observaciones: servicio.observaciones || ''
   }
   mostrarFormulario.value = true
+  nextTick(() => {
+    formularioRef.value?.resetValidation()
+  })
 }
 
 function cerrarFormulario() {
@@ -696,7 +727,64 @@ function cerrarFormulario() {
 }
 
 // Guardar (crear o actualizar)
-function guardarServicio() {
+async function guardarServicio() {
+  if (formularioRef.value) {
+    const esValido = await formularioRef.value.validate()
+    if (!esValido) {
+      $q.notify({
+        type: 'negative',
+        icon: 'warning',
+        message: 'Por favor, complete todos los campos obligatorios antes de guardar.'
+      })
+      return
+    }
+  }
+
+  // Validación explicita por código para garantizar que no queden campos vacíos
+  const f = formulario.value
+  if (!f.cliente || !f.cliente.trim()) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'El nombre del cliente es obligatorio.' })
+    return
+  }
+  if (!f.marca || !f.marca.trim()) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'La marca del equipo es obligatoria.' })
+    return
+  }
+  if (!f.modelo || !f.modelo.trim()) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'El modelo del equipo es obligatorio.' })
+    return
+  }
+  if (!f.tipoReparacion || !f.tipoReparacion.trim()) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'El tipo de reparación es obligatorio.' })
+    return
+  }
+  if (f.tipoReparacion === 'Otros' && (!f.otroTipoReparacion || !f.otroTipoReparacion.trim())) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'Debe especificar el tipo de reparación.' })
+    return
+  }
+  if (!f.tecnico || !f.tecnico.trim()) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'El técnico asignado es obligatorio.' })
+    return
+  }
+  if (f.precio === null || f.precio === '' || isNaN(f.precio) || Number(f.precio) < 0) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'El precio del servicio es obligatorio y debe ser un valor válido.' })
+    return
+  }
+  if (!f.metodoPago || !f.metodoPago.trim()) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'El método de pago es obligatorio.' })
+    return
+  }
+  if (f.estadoPago === 'abono') {
+    if (f.montoAbono === null || f.montoAbono === '' || isNaN(f.montoAbono) || Number(f.montoAbono) <= 0) {
+      $q.notify({ type: 'negative', icon: 'warning', message: 'El monto abonado es obligatorio y debe ser mayor a $0.' })
+      return
+    }
+    if (Number(f.montoAbono) >= Number(f.precio)) {
+      $q.notify({ type: 'negative', icon: 'warning', message: 'El abono debe ser menor al precio total.' })
+      return
+    }
+  }
+
   if (formulario.value.estadoEquipo === 'entregado' && esPagoPendiente(formulario.value)) {
     $q.notify({
       type: 'warning',
@@ -922,3 +1010,4 @@ function claseTarjeta(servicio) {
   border-left-color: #21ba45;
 }
 </style>
+
