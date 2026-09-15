@@ -200,20 +200,16 @@
                     <q-icon name="lock" /> Entregado (Finalizado)
                   </div>
 
-                  <div>
+                  <div v-if="servicio.estadoEquipo !== 'entregado'">
                     <q-btn
                       flat
                       dense
                       round
                       icon="edit"
                       color="primary"
-                      :disable="servicio.estadoEquipo === 'entregado'"
                       @click="abrirEdicion(servicio)"
                     >
-                      <q-tooltip v-if="servicio.estadoEquipo === 'entregado'">
-                        Un registro entregado ya no se puede editar
-                      </q-tooltip>
-                      <q-tooltip v-else>
+                      <q-tooltip>
                         Editar servicio
                       </q-tooltip>
                     </q-btn>
@@ -223,13 +219,9 @@
                       round
                       icon="delete"
                       color="negative"
-                      :disable="servicio.estadoEquipo === 'entregado'"
                       @click="confirmarEliminar(servicio)"
                     >
-                      <q-tooltip v-if="servicio.estadoEquipo === 'entregado'">
-                        Un registro entregado ya no se puede eliminar
-                      </q-tooltip>
-                      <q-tooltip v-else>
+                      <q-tooltip>
                         Eliminar registro
                       </q-tooltip>
                     </q-btn>
@@ -312,6 +304,18 @@
                     </q-select>
                   </div>
                 </div>
+
+                <!-- Campo para especificar marca si selecciona "Otra" -->
+                <q-input
+                  v-if="formulario.marca === 'Otra'"
+                  v-model="formulario.otraMarca"
+                  outlined
+                  dense
+                  label="Especifica la marca *"
+                  placeholder="Escribe el nombre de la marca"
+                  lazy-rules
+                  :rules="[val => (val && val.trim().length > 0) || 'Especifique la marca del equipo']"
+                />
 
                 <!-- Tipo de Reparación -->
                 <q-select
@@ -728,6 +732,7 @@ function formularioVacio() {
   return {
     cliente: '',
     marca: '',
+    otraMarca: '',
     modelo: '',
     equipo: '',
     tipoReparacion: '',
@@ -768,7 +773,10 @@ function obtenerOpcionesEstadoEquipoFiltradas() {
   }))
 }
 
-function onMarcaChange() {
+function onMarcaChange(val) {
+  if (val !== 'Otra') {
+    formulario.value.otraMarca = ''
+  }
   if (!modoEdicion.value) {
     formulario.value.modelo = ''
   }
@@ -801,8 +809,9 @@ function formatearPrecio(precio) {
 
 function obtenerNombreEquipo(s) {
   if (!s) return ''
-  if (s.marca || s.modelo) {
-    return `${s.marca || ''} ${s.modelo || ''}`.trim()
+  const marcaFinal = s.marca === 'Otra' && s.otraMarca ? s.otraMarca : (s.marca || '')
+  if (marcaFinal || s.modelo) {
+    return `${marcaFinal} ${s.modelo || ''}`.trim()
   }
   return s.equipo || 'Equipo sin especificar'
 }
@@ -831,6 +840,7 @@ function abrirEdicion(servicio) {
   formulario.value = {
     cliente: servicio.cliente || '',
     marca: servicio.marca || 'Samsung',
+    otraMarca: servicio.otraMarca || '',
     modelo: servicio.modelo || '',
     equipo: servicio.equipo || '',
     tipoReparacion: servicio.tipoReparacion || '',
@@ -882,6 +892,10 @@ async function guardarServicio() {
   }
   if (!f.marca || !f.marca.trim()) {
     $q.notify({ type: 'negative', icon: 'warning', message: 'La marca del equipo es obligatoria.' })
+    return
+  }
+  if (f.marca === 'Otra' && (!f.otraMarca || !f.otraMarca.trim())) {
+    $q.notify({ type: 'negative', icon: 'warning', message: 'Debe especificar la marca del equipo.' })
     return
   }
   if (!f.modelo || !f.modelo.trim()) {
@@ -1063,7 +1077,8 @@ function serviciosFiltrados() {
     if (busqueda.value && busqueda.value.trim() !== '') {
       const texto = busqueda.value.toLowerCase()
       const cliente = (s.cliente || '').toLowerCase()
-      const marca = (s.marca || '').toLowerCase()
+      const marcaStr = s.marca === 'Otra' && s.otraMarca ? s.otraMarca : (s.marca || '')
+      const marca = marcaStr.toLowerCase()
       const modelo = (s.modelo || '').toLowerCase()
       const equipo = (s.equipo || '').toLowerCase()
       coincideTexto =
