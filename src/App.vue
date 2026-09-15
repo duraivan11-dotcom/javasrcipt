@@ -294,7 +294,10 @@
                       fill-input
                       hide-selected
                       input-debounce="0"
+                      new-value-mode="add-unique"
                       @filter="filtrarModelos"
+                      @input-value="onModeloInput"
+                      @new-value="crearNuevoModelo"
                       lazy-rules
                       :rules="[val => (val && val.trim().length > 0) || 'El modelo es obligatorio']"
                     >
@@ -657,6 +660,22 @@ function filtrarModelos(val, update) {
   })
 }
 
+function onModeloInput(val) {
+  if (val !== undefined && val !== null && val.trim() !== '') {
+    formulario.value.modelo = val.trim()
+  }
+}
+
+function crearNuevoModelo(val, done) {
+  if (val && val.trim() !== '') {
+    const v = val.trim()
+    if (!opcionesModeloFiltradas.value.includes(v)) {
+      opcionesModeloFiltradas.value.push(v)
+    }
+    done(v, 'toggle')
+  }
+}
+
 const opcionesTipoReparacion = [
   'Cambio de pantalla',
   'Cambio de batería',
@@ -839,6 +858,10 @@ function abrirEdicion(servicio) {
 
 function cerrarFormulario() {
   mostrarFormulario.value = false
+  formulario.value = formularioVacio()
+  if (formularioRef.value) {
+    formularioRef.value.resetValidation()
+  }
 }
 
 // Guardar (crear o actualizar)
@@ -932,7 +955,7 @@ async function guardarServicio() {
     })
   }
 
-  mostrarFormulario.value = false
+  cerrarFormulario()
 }
 
 // Entrega y calificación
