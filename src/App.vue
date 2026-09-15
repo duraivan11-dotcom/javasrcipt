@@ -277,6 +277,7 @@
                       dense
                       label="Marca del equipo *"
                       :options="opcionesMarca"
+                      @update:model-value="onMarcaChange"
                       lazy-rules
                       :rules="[val => (val && val.trim().length > 0) || 'Seleccione la marca']"
                     />
@@ -319,6 +320,7 @@
                   dense
                   label="Tipo de reparación *"
                   :options="opcionesTipoReparacion"
+                  @update:model-value="onTipoReparacionChange"
                   lazy-rules
                   :rules="[val => (val && val.trim().length > 0) || 'Seleccione el tipo de reparación']"
                 />
@@ -443,7 +445,7 @@
                     emit-value
                     map-options
                     label="Estado del equipo"
-                    :options="opcionesEstadoEquipoFiltradas"
+                    :options="obtenerOpcionesEstadoEquipoFiltradas()"
                     :disable="!modoEdicion"
                   />
                   <div v-if="!modoEdicion" class="text-caption text-grey-7 q-mt-xs">
@@ -541,7 +543,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 import { useQuasar } from 'quasar'
 
@@ -637,15 +639,15 @@ const modelosPorMarca = {
 
 const opcionesModeloFiltradas = ref([])
 
-const modelosDisponibles = computed(() => {
+function obtenerModelosDisponibles() {
   const marca = formulario.value.marca
   if (!marca || !modelosPorMarca[marca]) return []
   return modelosPorMarca[marca]
-})
+}
 
 function filtrarModelos(val, update) {
   update(() => {
-    const lista = modelosDisponibles.value
+    const lista = obtenerModelosDisponibles()
     if (val === '') {
       opcionesModeloFiltradas.value = lista
     } else {
@@ -758,31 +760,25 @@ function esPagoPendiente(s) {
 }
 
 // Opciones de estado filtradas dinámicamente según el pago
-const opcionesEstadoEquipoFiltradas = computed(() => {
+function obtenerOpcionesEstadoEquipoFiltradas() {
   const pagoIncompleto = esPagoPendiente(formulario.value)
   return opcionesEstadoEquipo.map(op => ({
     ...op,
     disable: op.value === 'entregado' && pagoIncompleto
   }))
-})
+}
 
-// Si cambia la marca, limpia el modelo salvo si estamos abriendo para edición
-watch(
-  () => formulario.value.marca,
-  (nuevaMarca, viejaMarca) => {
-    if (nuevaMarca !== viejaMarca && !modoEdicion.value) {
-      formulario.value.modelo = ''
-    }
+function onMarcaChange() {
+  if (!modoEdicion.value) {
+    formulario.value.modelo = ''
   }
-)
+}
 
-// Si cambia tipo de reparación distinto de 'Otros', limpia la especificación
-watch(
-  () => formulario.value.tipoReparacion,
-  (nuevo) => {
-    if (nuevo !== 'Otros') formulario.value.otroTipoReparacion = ''
+function onTipoReparacionChange(val) {
+  if (val !== 'Otros') {
+    formulario.value.otroTipoReparacion = ''
   }
-)
+}
 
 // Utilidades de fecha
 function fechaHoy() {
